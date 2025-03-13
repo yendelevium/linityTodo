@@ -1,6 +1,7 @@
 use axum::{
     Router,
-    routing::{get, put},
+    middleware::from_fn_with_state,
+    routing::{get, post, put},
 };
 
 use sqlx::postgres::PgPoolOptions;
@@ -9,7 +10,9 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 
 mod todo;
+mod user;
 use todo::handlers::{create_todo, delete_todo, get_list, update_todo};
+use user::handlers::{auth_middleware, login, logout, register};
 
 #[tokio::main]
 async fn main() {
@@ -36,10 +39,17 @@ async fn main() {
     let router = Router::new()
         .route("/todo", get(get_list).post(create_todo))
         .route("/todo/{todo_id}", put(update_todo).delete(delete_todo))
+        .layer(from_fn_with_state(db_pool.clone(), auth_middleware));
+
+    let user_router = Router::new()
+        .route("/users", post(register))
+        .route("/logout", post(logout))
+        .route("/login", post(login))
+        .merge(router)
         .with_state(db_pool);
 
     println!("Listening on: {}", listener.local_addr().unwrap());
-    axum::serve(listener, router)
+    axum::serve(listener, user_router)
         .await
         .expect("Couldn't start the server");
 }
