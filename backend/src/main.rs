@@ -14,6 +14,29 @@ mod user;
 use todo::handlers::{create_todo, delete_todo, get_list, update_todo};
 use tower_http::services::ServeDir;
 use user::handlers::{auth_middleware, check_auth, login, logout, register};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+#[derive(OpenApi)]
+#[openapi(
+        paths(
+            user::handlers::register,
+            user::handlers::login,
+            user::handlers::logout,
+            user::handlers::check_auth,
+            todo::handlers::get_list,
+            todo::handlers::create_todo,
+            todo::handlers::delete_todo,
+            todo::handlers::update_todo,
+        ),
+        components(
+            schemas(user::models::AuthReq,todo::models::User,todo::models::UpdateTodo,todo::models::ToDo,todo::models::CreateTodo)
+        ),
+        tags(
+            (name = "ToDo App", description = "Todo items management API")
+        )
+    )]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() {
@@ -47,8 +70,9 @@ async fn main() {
         .route("/logout", post(logout))
         .route("/login", post(login))
         .route("/check_auth", get(check_auth))
-        .fallback_service(get_service(ServeDir::new("../frontend/out")))
         .merge(router)
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .fallback_service(get_service(ServeDir::new("../frontend/out")))
         .with_state(db_pool);
 
     println!("Listening on: {}", listener.local_addr().unwrap());

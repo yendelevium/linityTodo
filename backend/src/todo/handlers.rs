@@ -11,7 +11,38 @@ use uuid::Uuid;
 
 use crate::todo::models::{CreateTodo, ToDo, UpdateTodo, User};
 
+use utoipa::OpenApi;
+
 // Todo Routes
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        get_list,
+        create_todo,
+        update_todo,
+        delete_todo
+    ),
+    components(
+        schemas(User, CreateTodo, UpdateTodo, ToDo)
+    ),
+    tags(
+        (name = "todo", description = "Todo endpoints")
+    )
+)]
+struct _ApiDoc;
+
+#[utoipa::path(
+    get,
+    path = "/todos",
+    params(
+        ("username" = String, Query, description = "Username to fetch todos for")
+    ),
+    responses(
+        (status = 200, description = "List of todos fetched successfully"),
+        (status = 400, description = "Username is required"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_list(
     State(pg_pool): State<PgPool>,
     Query(query_params): Query<User>,
@@ -43,6 +74,15 @@ pub async fn get_list(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/todos",
+    request_body = CreateTodo,
+    responses(
+        (status = 201, description = "Todo created successfully"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn create_todo(
     State(pg_pool): State<PgPool>,
     Json(new_todo): Json<CreateTodo>,
@@ -74,6 +114,19 @@ pub async fn create_todo(
 }
 
 // Add Authorization? If time permits
+#[utoipa::path(
+    put,
+    path = "/todos/{todo_id}",
+    params(
+        ("todo_id" = String, Path, description = "ID of the todo to update")
+    ),
+    request_body = UpdateTodo,
+    responses(
+        (status = 200, description = "Todo updated successfully"),
+        (status = 404, description = "Todo not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn update_todo(
     State(pg_pool): State<PgPool>,
     Path(todo_id): Path<String>,
@@ -139,6 +192,18 @@ pub async fn update_todo(
     ))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/todos/{todo_id}",
+    params(
+        ("todo_id" = String, Path, description = "ID of the todo to delete")
+    ),
+    responses(
+        (status = 200, description = "Todo deleted successfully"),
+        (status = 404, description = "Todo not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn delete_todo(
     State(pg_pool): State<PgPool>,
     Path(todo_id): Path<String>,

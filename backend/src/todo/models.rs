@@ -1,7 +1,8 @@
 // serde to convert To and From JSON
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ToDo {
     pub username: Option<String>,
     pub todo_id: Option<String>,
@@ -9,18 +10,18 @@ pub struct ToDo {
     pub status: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct User {
     pub username: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateTodo {
     pub username: String,
     pub description: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct UpdateTodo {
     pub description: Option<String>,
     pub status: Option<bool>,

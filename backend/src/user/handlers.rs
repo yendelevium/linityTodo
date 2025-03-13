@@ -7,8 +7,28 @@ use axum::{
 use serde_json::json;
 use sqlx::PgPool;
 
+use utoipa::OpenApi;
+
 // Create session cookie header
 // Not exactly a session, but like a watered-down JWT as I didn't have enough time to actually implement a JWT so bear with me here TvT
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        register,
+        login,
+        logout,
+        check_auth
+    ),
+    components(
+        schemas(AuthReq)
+    ),
+    tags(
+        (name = "auth", description = "Authentication endpoints")
+    )
+)]
+struct _ApiDoc;
+
 fn cookie(username: &str, status: bool) -> HeaderMap {
     let mut headers = HeaderMap::new();
     let cookie_value = if status {
@@ -23,6 +43,16 @@ fn cookie(username: &str, status: bool) -> HeaderMap {
     println!("{:?}", headers.get(SET_COOKIE));
     headers
 }
+
+#[utoipa::path(
+    post,
+    path = "/register",
+    request_body = AuthReq,
+    responses(
+        (status = 200, description = "User registered successfully"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 
 pub async fn register(
     State(pg_pool): State<PgPool>,
@@ -53,6 +83,16 @@ pub async fn register(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/login",
+    request_body = AuthReq,
+    responses(
+        (status = 200, description = "Login successful"),
+        (status = 401, description = "Invalid credentials"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn login(
     State(pg_pool): State<PgPool>,
     Json(credentials): Json<AuthReq>,
@@ -88,6 +128,14 @@ pub async fn login(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/logout",
+    responses(
+        (status = 200, description = "Logged out successfully"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn logout() -> Result<(StatusCode, HeaderMap, String), (StatusCode, String)> {
     // Remove the session cookie, so he logs out automatically
     let headers = cookie("", true);
@@ -98,6 +146,15 @@ pub async fn logout() -> Result<(StatusCode, HeaderMap, String), (StatusCode, St
     ))
 }
 
+#[utoipa::path(
+    get,
+    path = "/check_auth",
+    responses(
+        (status = 200, description = "User is authenticated"),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 // Extract redundant logic b/w check_auth and auth_middleware
 pub async fn check_auth(
     State(pool): State<PgPool>,
