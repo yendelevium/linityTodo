@@ -1,7 +1,7 @@
 use axum::{
     Router,
     middleware::from_fn_with_state,
-    routing::{get, post, put},
+    routing::{get, get_service, post, put},
 };
 
 use sqlx::postgres::PgPoolOptions;
@@ -12,6 +12,7 @@ use tokio::net::TcpListener;
 mod todo;
 mod user;
 use todo::handlers::{create_todo, delete_todo, get_list, update_todo};
+use tower_http::services::ServeDir;
 use user::handlers::{auth_middleware, check_auth, login, logout, register};
 
 #[tokio::main]
@@ -21,7 +22,8 @@ async fn main() {
     // Defaulting to localhost:8080 if we don't get the server_address, but we panic and exit if db_url idn't found coz obviously
     let server_address = std::env::var("SERVER_ADDRESS").unwrap_or("127.0.0.1:8080".to_owned());
     let db_url = std::env::var("DB_URL").expect("Couldn't retrieve DB_URL from .env file");
-
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    println!("Current directory: {:?}", current_dir);
     // Using a database_pool prevents reconnection to the DB for every request, and helps with concurrent requests to the server
     let db_pool = PgPoolOptions::new()
         .max_connections(16)
@@ -31,7 +33,6 @@ async fn main() {
 
     // Maybe use a logger?
     println!("Connection to DB estabilished");
-
     let listener = TcpListener::bind(server_address)
         .await
         .expect("Couldn't create a TCP Listener");
@@ -46,6 +47,7 @@ async fn main() {
         .route("/logout", post(logout))
         .route("/login", post(login))
         .route("/check_auth", get(check_auth))
+        .fallback_service(get_service(ServeDir::new("../frontend/out")))
         .merge(router)
         .with_state(db_pool);
 

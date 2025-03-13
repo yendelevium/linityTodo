@@ -42,7 +42,7 @@ export function TodoList() {
             To do, or not to do, that is the question
         </h1>
         <h2 className="text-xl font-bold tracking-tight text-gray-900 text-center">
-          {user.username}'s Todo List (<span onClick={logout} className="cursor-pointer">Logout?</span>)
+          {user.username} &apos; s Todo List (<span onClick={logout} className="cursor-pointer">Logout?</span>)
         </h2>
         <div className="flex space-x-2">
           <input
