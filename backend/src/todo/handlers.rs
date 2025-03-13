@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
 };
 
@@ -14,12 +14,18 @@ use crate::todo::models::{CreateTodo, ToDo, UpdateTodo, User};
 // Todo Routes
 pub async fn get_list(
     State(pg_pool): State<PgPool>,
-    Json(user): Json<User>,
+    Query(query_params): Query<User>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if query_params.username.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            json!({"success": false, "message": "Username is required"}).to_string(),
+        ));
+    }
     let list = sqlx::query_as!(
         ToDo,
         "SELECT username, todo_id, description, status FROM todos WHERE username = $1",
-        user.username
+        query_params.username
     )
     .fetch_all(&pg_pool)
     .await
@@ -30,7 +36,7 @@ pub async fn get_list(
         )
     })?;
 
-    println!("Got the Todo list for {}", user.username);
+    println!("Got the Todo list for {}", query_params.username);
     Ok((
         StatusCode::OK,
         json!({"success":true, "data":list}).to_string(),

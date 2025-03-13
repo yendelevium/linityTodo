@@ -16,10 +16,11 @@ fn cookie(username: &str, status: bool) -> HeaderMap {
         "session=; Path=/; Max-Age=0".to_string()
     } else {
         // For login, set the username in the cookie
-        format!("session={}; Path=/", username)
+        format!("session={}; Path=/; Secure; SameSite=None", username)
     };
 
     headers.insert(SET_COOKIE, cookie_value.parse().unwrap());
+    println!("{:?}", headers.get(SET_COOKIE));
     headers
 }
 

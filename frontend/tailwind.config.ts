@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss'
-import { PluginAPI } from 'tailwindcss/types/config'
+import plugin from 'tailwindcss/plugin'
 
 const config: Config = {
     content: ['./src/components/**/*.{js,ts,jsx,tsx,mdx}', './src/app/**/*.{js,ts,jsx,tsx,mdx}'],
@@ -258,7 +258,7 @@ const config: Config = {
         require('@tailwindcss/forms'),
         require('tailwindcss-animated'),
         require('tailwind-scrollbar'),
-        function ({ addBase, theme }: PluginAPI) {
+        plugin(function ({ addBase, theme }) {
             addBase({
                 h1: {
                     fontWeight: theme?.('fontWeight.semi-bold') || '550',
@@ -308,8 +308,8 @@ const config: Config = {
                     label: { fontSize: '10px', lineHeight: '16px' },
                 },
             })
-        },
-        function ({ addComponents }: PluginAPI) {
+        }),
+        plugin(function ({ addComponents }) {
             addComponents({
                 '.container': {
                     maxWidth: '100%',
@@ -334,8 +334,8 @@ const config: Config = {
                     },
                 },
             })
-        },
+        }),
     ],
-}
+} as unknown as Config;
 
 export default config

@@ -12,3 +12,5 @@ serde_json = {version = "1.0.140"}
 dotenvy = "0.15.7"
 uuid = {version = "1.15.1", features = ["v4", "serde"]}
 sqlx-cli = "0.8.3"
+utoipa = {version = "5", features = ["axum_extras"]}
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
