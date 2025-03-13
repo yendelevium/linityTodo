@@ -98,6 +98,61 @@ pub async fn logout() -> Result<(StatusCode, HeaderMap, String), (StatusCode, St
     ))
 }
 
+// Extract redundant logic b/w check_auth and auth_middleware
+pub async fn check_auth(
+    State(pool): State<PgPool>,
+    req: axum::http::Request<axum::body::Body>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    // Extract username from cookie (using the same logic as auth_middleware)
+    let username = req
+        .headers()
+        .get_all(axum::http::header::COOKIE)
+        .iter()
+        .filter_map(|c| c.to_str().ok())
+        .find_map(|cookies| {
+            cookies.split(';').find_map(|cookie| {
+                let mut parts = cookie.trim().splitn(2, '=');
+                match (parts.next(), parts.next()) {
+                    (Some(key), Some(value)) if key == "session" => Some(value.to_string()),
+                    _ => None,
+                }
+            })
+        });
+
+    let username = username.ok_or((
+        StatusCode::UNAUTHORIZED,
+        json!({"success": false, "message": "Please Login"}).to_string(),
+    ))?;
+
+    // Check if user exists in DB
+    let exists = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)",
+        username
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            json!({"success": false, "message": e.to_string()}).to_string(),
+        )
+    })?
+    .unwrap_or(false);
+
+    if !exists {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            json!({"success": false, "message": "Please Login"}).to_string(),
+        ));
+    }
+
+    // Return the username if validation succeeds
+    Ok((
+        StatusCode::OK,
+        json!({"success": true, "username": username}).to_string(),
+    ))
+}
+
 pub async fn auth_middleware(
     State(pool): State<PgPool>,
     mut req: axum::http::Request<axum::body::Body>,

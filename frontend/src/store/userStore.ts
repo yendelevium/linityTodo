@@ -1,22 +1,7 @@
 import {create} from 'zustand';
+import { UserState } from '@/types/todo';
 
-interface Todo {
-    todo_id: string;
-    description: string;
-    status: boolean;
-    username: string;
-}
-
-interface UserState {
-    user: { username: string } | null;
-    todos: Todo[];
-    login: (username: string, password: string) => Promise<void>;
-    signup: (username: string, password: string) => Promise<void>;
-    fetchTodos: (usernm: string) => Promise<void>;
-    logout: () => void;
-}
-
-const useUserStore = create<UserState>((set) => ({
+const useUserStore = create<UserState>((set, get) => ({
     user: null,
     todos: [],
     login: async (username: string, password: string) => {
@@ -41,7 +26,7 @@ const useUserStore = create<UserState>((set) => ({
             return data;
         } catch (error) {
             console.error('Error during login:', error);
-            throw error; // Re-throw the error to handle it in the calling function
+            throw error;
         }
     },
     signup: async (username: string, password: string) => {
@@ -76,10 +61,104 @@ const useUserStore = create<UserState>((set) => ({
         console.log(todos);
         set({ todos: todos.data });
     },
+    addTodo: async (description: string) => {
+        const { user } = get();
+        if (!description.trim() || !user) return;
+
+        try {
+            const response = await fetch('http://127.0.0.1:8080/todo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    description,
+                    username: user.username,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to add todo');
+            }
+
+            await useUserStore.getState().fetchTodos(user.username);
+        } catch (error) {
+            console.error('Error adding todo:', error);
+            throw error;
+        }
+    },
+    toggleTodo: async (todoId: string) => {
+        const { user, todos } = get();
+        if (!user) return;
+
+        try {
+            const todo = todos.find(t => t.todo_id === todoId);
+            if (!todo) return;
+
+            const response = await fetch(`http://127.0.0.1:8080/todo/${todoId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    status: !todo.status,
+                    username: user.username,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update todo');
+            }
+
+            await useUserStore.getState().fetchTodos(user.username);
+        } catch (error) {
+            console.error('Error updating todo:', error);
+            throw error;
+        }
+    },
+    deleteTodo: async (todoId: string) => {
+        const { user } = get();
+        if (!user) return;
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8080/todo/${todoId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete todo');
+            }
+
+            await useUserStore.getState().fetchTodos(user.username);
+        } catch (error) {
+            console.error('Error deleting todo:', error);
+            throw error;
+        }
+    },
     logout: () => {
-        // Clear user and todos
         set({ user: null, todos: [] });
     },
+    checkAuth: async () => {
+        try {
+            const response = await fetch('http://127.0.0.1:8080/check_auth', {
+                credentials: "include"
+            });
+            if (!response.ok) {
+                throw new Error('Not authenticated');
+            }
+            const data = await response.json();
+            if (data.username) {
+                set({ user: { username: data.username } });
+                await useUserStore.getState().fetchTodos(data.username);
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            set({ user: null, todos: [] });
+        }
+    }
 }));
 
 export default useUserStore;

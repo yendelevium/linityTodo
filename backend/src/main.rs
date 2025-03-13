@@ -12,7 +12,7 @@ use tokio::net::TcpListener;
 mod todo;
 mod user;
 use todo::handlers::{create_todo, delete_todo, get_list, update_todo};
-use user::handlers::{auth_middleware, login, logout, register};
+use user::handlers::{auth_middleware, check_auth, login, logout, register};
 
 #[tokio::main]
 async fn main() {
@@ -45,6 +45,7 @@ async fn main() {
         .route("/users", post(register))
         .route("/logout", post(logout))
         .route("/login", post(login))
+        .route("/check_auth", get(check_auth))
         .merge(router)
         .with_state(db_pool);
 
